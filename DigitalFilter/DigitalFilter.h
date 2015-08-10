@@ -46,26 +46,31 @@
 #ifndef _DIGITALFILTER_H_
 #define _DIGITALFILTER_H_
 
+#include <vector>
+
 class DigitalFilter
 {
 
 public:
 	// Constructors
 	DigitalFilter(int filterOrder_userdef, bool isIIR);
-	DigitalFilter(int filterOrder_userdef, bool isIIR, double *b_userdef, double *a_userdef);
-
+	DigitalFilter(int filterOrder_userdef, bool isIIR, const std::vector<double> &b_userdef, const std::vector<double> &a_userdef);
 	~DigitalFilter(void);	// Destructicon
 
 	double getNextFilteredValue(double u_current);
 	void  reset(double reset_value);
 
+	bool setCoefficients(const std::vector<double> &b_userdef, const std::vector<double> &a_userdef);
+	bool isInitialized() const;
+
 protected:
-	double *a, *b;		// filter coefficients
-	double *u, *x;		// filter input and output states
+	std::vector<double> a_, b_;		// filter coefficients
+	std::vector<double> u_, x_;		// filter input and output states
 	
 private:
-	int filterOrder;
-        bool IIR;
+	int filterOrder_;
+	bool IIR_;
+	bool initialized_;
 	
 };
 
