@@ -47,97 +47,96 @@
 
 DigitalFilter::DigitalFilter(int filterOrder_userdef, bool isIIR)
 {
-	filterOrder = filterOrder_userdef;
-        IIR = isIIR;
+	filterOrder_ = filterOrder_userdef;
+	IIR_ = isIIR;
 	
-	b = new double [filterOrder + 1];
-	a = new double [filterOrder + 1];
+	// Initialize the vectors with zeros
+	b_.assign(filterOrder_ + 1, 0.0);
+	a_.assign(filterOrder_ + 1, 0.0);
 
-	x = new double [filterOrder + 1];
-	u = new double [filterOrder + 1];
-
-	// Initialize the arrays with zeros
-	for(int i = 0; i < (filterOrder + 1); i++)
-	{
-		b[i] = 0.0;
-		a[i] = 0.0;
-		x[i] = 0.0;
-		u[i] = 0.0;
-	}
+	x_.assign(filterOrder_ + 1, 0.0);
+	u_.assign(filterOrder_ + 1, 0.0);
 }	
 
-DigitalFilter::DigitalFilter(int filterOrder_userdef, bool isIIR, double *b_userdef, double *a_userdef)
+DigitalFilter::DigitalFilter(int filterOrder_userdef, bool isIIR, const std::vector<double> &b_userdef, const std::vector<double> &a_userdef)
 {
-  
-	filterOrder = filterOrder_userdef;
-        IIR = isIIR;
-	
-	b = new double [filterOrder + 1];
-	a = new double [filterOrder + 1];
+	filterOrder_ = filterOrder_userdef;
+	IIR_ = isIIR;
 
-	x = new double [filterOrder + 1];
-	u = new double [filterOrder + 1];
+	// Initialize the vectors with zeros
+	x_.assign(filterOrder_ + 1, 0.0);
+	u_.assign(filterOrder_ + 1, 0.0);
 
-	// Initialize the arrays
-	
-	for(int i = 0; i < (filterOrder + 1); i++)
-	{
-		b[i] = b_userdef[i];
-		a[i] = a_userdef[i];
-		x[i] = 0.0;
-		u[i] = 0.0;
+	// Copy the filter coefficients.
+	setCoefficients(b_userdef, a_userdef);
+}
+
+DigitalFilter::~DigitalFilter(void)
+{
+
+}
+bool DigitalFilter::isInitialized() const
+{
+	return initialized_;
+}
+
+bool DigitalFilter::setCoefficients(const std::vector<double> &b_userdef, const std::vector<double> &a_userdef)
+{
+	// Initialize the vectors with zeros
+	b_.assign(b_userdef.begin(), b_userdef.end());
+	a_.assign(a_userdef.begin(), a_userdef.end());
+
+	if ((b_.size() == filterOrder_ + 1) && (a_.size() == filterOrder_ + 1)
+		&& (x_.size() == filterOrder_ + 1) && (u_.size() == filterOrder_ + 1) ) {
+		initialized_ = true;
 	}
-	
+	else {
+		initialized_ = false;
+	}
+
+	return initialized_;
 }
 
 double DigitalFilter::getNextFilteredValue(double u_current)
 {
-	/* Shift x2 and u2 vectors, losing the last elements and putting new u2 value in zeroth spot. */
-	for (int i = filterOrder ; i > 0 ; i--) {
-		x[i] = x[i-1];
-		u[i] = u[i-1];
+	if (!initialized_) {
+		return 0.0;
 	}
-	u[0] = u_current; 
+
+	/* Shift x2 and u2 vectors, losing the last elements and putting new u2 value in zeroth spot. */
+	for (int i = filterOrder_ ; i > 0 ; i--) {
+		x_[i] = x_[i-1];
+		u_[i] = u_[i-1];
+	}
+	u_[0] = u_current; 
 
 	/* Simulate system. */
-	double output = b[0] * u[0];
+	double output = b_[0] * u_[0];
 	  
   // if we have an IIR filter
-  if(IIR)
+  if(IIR_)
   {
-    for (int i = 1 ; i < (filterOrder+1) ; i++) {
-      output += b[i] * u[i] - a[i] * x[i];
+    for (int i = 1 ; i < (filterOrder_+1) ; i++) {
+      output += b_[i] * u_[i] - a_[i] * x_[i];
     }
   }
 
  // if we have an FIR filter
   else
   {
-    for (int i = 1 ; i < (filterOrder+1) ; i++) {
-      output += b[i] * u[i];
+    for (int i = 1 ; i < (filterOrder_+1) ; i++) {
+      output += b_[i] * u_[i];
     }
   }
 
 	/* Put the result in shared memory and in the x2 vector. */
-	x[0] = output;
+	x_[0] = output;
 
 	return output;
 }
 
 void  DigitalFilter::reset(double reset_value)
 {
-  //iterate through all filter values and set equal to zero
-  for(int i = filterOrder; i > -1; i--)
-  {
-    x[i] = reset_value;
-    u[i] = reset_value;
-  }
-}
-
-DigitalFilter::~DigitalFilter(void)
-{
-	delete[] x;
-	delete[] u;
-	delete[] a;
-	delete[] b;
+	x_.assign(filterOrder_ + 1, reset_value);
+	u_.assign(filterOrder_ + 1, reset_value);
 }
